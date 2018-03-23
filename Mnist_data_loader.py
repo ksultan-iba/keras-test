@@ -4,7 +4,8 @@ import os
 
 
 def load_mnist_data():
-    fpath = os.path.join('MNIST-data', 'mnist.npz')
+    dirpath=os.path.dirname(__file__)
+    fpath = os.path.join(dirpath, 'MNIST-data/mnist.npz')
     f = np.load(fpath)
     x_train, y_train = f['x_train'], f['y_train']
     x_test, y_test = f['x_test'], f['y_test']
