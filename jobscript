@@ -1,0 +1,40 @@
+#!/bin/bash
+
+#SBATCH --job-name=KERAS-MNIST-EXAMPLE
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=24
+#SBATCH --output=keras-out.%j
+#SBATCH --error=keras-err.%j
+#SBATCH --time=01:00:00
+#SBATCH --partition=devel
+#SBATCH --cpus-per-task=1
+
+# job script for TensorFlow MNIST tutorial
+# see https://www.tensorflow.org/get_started/mnist/beginners
+
+#module load TensorFlow/1.4.0-intel-2017b-Python-3.6.3
+#module load Keras/2.1.1-intel-2017b-Python-3.6.3
+
+module use /usr/local/software/jureca/OtherStages
+module load Stages/Devel-2017b  GCC/5.4.0  MVAPICH2/2.3a-GDR TensorFlow/1.4.0-Python-3.6.3 Keras/2.1.4-Python-2.7.14
+
+
+
+# make sure Keras is using TensorFlow as backend
+export KERAS_BACKEND=tensorflow
+
+#export WORKDIR=$VSC_SCRATCH/${PBS_JOBNAME}_${PBS_JOBID}
+#mkdir -p $WORKDIR
+#cd $WORKDIR
+
+APPDIR=/homea/paj1806/paj18061/ktest/keras-test/
+
+#export WORKDIR=$WORK/${SLURM_JOB_NAME}_${SLURM_JOB_ID}
+#mkdir -p $WORKDIR
+#cd $WORKDIR
+
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+python $APPDIR/Keras-Mnist.py
+
+#echo "Working directory was $WORKDIR"
+
