@@ -1,0 +1,162 @@
+#!/bin/sh
+#SBATCH --nodes=1
+##SBATCH --ntasks=24
+#SBATCH --ntasks-per-node=4
+#SBATCH --cpus-per-task=6
+#SBATCH --output=TestMultiGPU-out.%j
+#SBATCH --error=TestMultiGPU-err.%j
+#SBATCH --time=02:00:00
+#SBATCH --partition=gpus
+#SBATCH --gres=mem128,gpu:4
+
+#SBATCH --partition=gpus
+# #SBATCH --partition=develgpus
+# #SBATCH --cpus-per-task=12
+
+# TASKS = NODES * GPUS
+# GPUS per NODE = 4
+# TASKS = NODES * 4
+# CPU per TASK = CORES_CPU / GPUS = 48 / 4 = 12
+
+HOME_PATH=$HOME/ktest/keras-test
+##NCCL_SUBPATH=usr/nccl_2.1.2-1+cuda8.0_x86_64
+
+##NCCL_PATH=$HOME_PATH/$NCCL_SUBPATH
+
+##TF_CNN_BENCH_SUBPATH=container/horovod_benchmarks/scripts/tf_cnn_benchmarks
+##TF_CNN_BENCH_PATH=$HOME_PATH/$TF_CNN_BENCH_SUBPATH
+
+##OUTPUT_DIR=work/output
+##OUTPUT_PATH=$HOME_PATH/$OUTPUT_DIR
+
+
+##export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NCCL_PATH/lib
+##export LIBRARY_PATH=$LIBRARY_PATH:$NCCL_PATH/lib
+##export CPATH=$CPATH:$NCCL_PATH/include
+
+##CONF_NAME="TensorFlow-Horovod-Test-NO_GPUDIRECT-1.4"
+
+##module use /usr/local/software/jureca/OtherStages
+##module load Stages/2017a
+##module load GCC
+##module load MVAPICH2
+##module load cuDNN/6.0
+module use /usr/local/software/jureca/OtherStages
+module load Stages/Devel-2017b  
+##module load Stages/2017b
+module load GCC/5.4.0
+module load MVAPICH2/2.3a-GDR 
+module load cuDNN/7.0.3-CUDA-9.0.176
+module load TensorFlow/1.4.0-Python-3.6.3
+module load Keras/2.1.4-Python-2.7.14
+
+
+
+# ------ activating corresponding virtual environment -------- 
+##source ~/.virtualenvs/TensorFlow-Horovod-Test-NO_GPUDIRECT-1.4/bin/activate
+
+# ---------- after activating virtual env, relevant variables --------
+
+##export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NCCL_PATH/lib
+##export LIBRARY_PATH=$LIBRARY_PATH:$NCCL_PATH/lib
+##export CPATH=$CPATH:$NCCL_PATH/include
+
+
+
+# NCCL debug
+export NCCL_DEBUG=INFO
+# libraries debug
+# export LD_DEBUG=all
+# show backtrace for MPICH
+export MV2_DEBUG_SHOW_BACKTRACE=1
+
+export MV2_USE_CUDA=1
+# FORCING RDMA for all message exchange
+# export MV2_GPUDIRECT_LIMIT=1000000000
+
+
+# export ##MV2_PATH=/usr/local/software/jureca/Stages/2017a/software/MVAPICH2/2.2-GCC-5.4.0-GDR
+# export LD_PRELOAD=$MV2_PATH/lib64/libmpi.so
+
+# show process binding
+export MV2_SHOW_CPU_BINDING=1
+
+# EXP WORTH TRYING?
+# export MV2_CUDA_NUM_EVENTS=256
+# export MV2_CUDA_BLOCK_SIZE=524288
+
+# EXP : falling back to NON GPUDIRECT Stuff
+
+# ---- WORKING ------------------
+# export MV2_CUDA_ENABLE_MANAGED=1
+# export MV2_CUDA_MANAGED_IPC=1
+# export MV2_USE_GPUDIRECT=0
+
+
+
+# EXP : disable RDMA for NCCL
+# export NCCL_IB_DISABLE=1
+# EXP : disable RDMA for MVAPICH ?
+# export MV2_USE_RDMA_FASTPATH=0
+# EXP : disable GPUDIRECT
+# export MV2_USE_GPUDIRECT=0
+
+
+
+# TRY: explicitely enable multicast for IB
+# in horovod_v2, didn't bring any differece so far
+# export MV2_USE_MCAST=1
+# export MV2_MCAST_NUM_NODES_THRESHOLD=1
+
+
+# show backtrace for MPICH
+export MV2_DEBUG_SHOW_BACKTRACE=1
+
+APPDIR=/homea/paj1806/paj18061/ktest/keras-test/
+python $APPDIR/Keras-Mnist.py
+
+# ------------------- EXP MVAPICH2 ---------------------------
+# export MV2_RAIL_SHARING_POLICY=FIXED_MAPPING
+# export MV2_PROCESS_TO_RAIL_MAPPING=BUNCH
+#
+# export MV2_CPU_BINDING_LEVEL=socket
+# export MV2_CPU_BINDING_POLICY=bunch
+
+
+# FOR DEBUG: disabling InfinityBand
+# export NCCL_IB_DISABLE=1
+
+# --variable_update horovod in combination with --horovod_device gpu caused Segmentation Fault
+# srun python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet101 --batch_size 64 --horovod_device gpu --variable_update horovod
+
+# srun python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod --horovod_device gpu
+
+# srun --cpu_bind=none python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --horovod_device gpu
+# srun --cpu_bind=none python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod --horovod_device gpu
+
+# srun --cpu_bind=none python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod
+
+# -- EXP ---
+# srun --cpu_bind=none,v --accel-bind=gn python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod
+# srun --cpu_bind=v --accel-bind=gn python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod
+# srun --cpu_bind=ldoms,v --accel-bind=gn python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod
+# srun --cpu_bind=none,v --distribution=block:fcyclic:fcyclic --accel-bind=gn python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod
+# srun --cpu_bind=none,v python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod --horovod_device gpu
+
+# --------------- WORKING --------------------
+# srun --cpu_bind=none,v --distribution=block:fcyclic:fcyclic --accel-bind=gn python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod --horovod_device gpu
+
+# -- EXP, WORKING ---
+# srun --cpu_bind=none,v python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod
+# srun --cpu_bind=none,v --accel-bind=gn python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet50 --batch_size 64 --variable_update horovod
+
+## USE --horovod_device gpu to enable GPU computing explicitely? As it seems,
+# HOROVOD falls back to CPU without GPUDIRECT
+# DEBUG:
+
+
+#
+# srun python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet101 --batch_size 64 --variable_update horovod
+
+# srun --cpu_bind=none python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet101 --batch_size 64 --variable_update horovod
+# srun --cpu_bind=none python $TF_CNN_BENCH_PATH/tf_cnn_benchmarks.py --model resnet101 --batch_size 64 --variable_update horovod --local_parameter_device cpu
